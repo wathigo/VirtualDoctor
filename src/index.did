@@ -1,0 +1,23 @@
+type Booking = record {
+  id : int32;
+  doctorId : int32;
+  userId : int32;
+  createdAt : nat64;
+};
+type BookingPayload = record { doctorId : int32; userId : int32 };
+type Doctor = record { id : int32; username : text; createdAt : nat64 };
+type User = record { id : int32; username : text; createdAt : nat64 };
+service : () -> {
+  createBooking : (BookingPayload) -> (Booking);
+  createDoctor : (text) -> (Doctor);
+  createUser : (text) -> (User);
+  deleteBooking : (int32) -> (opt Booking);
+  deleteDoctor : (int32) -> (opt User);
+  deleteUser : (int32) -> (opt User);
+  getDoctor : (int32) -> (opt User) query;
+  getDoctorBookings : (int32) -> (vec Booking) query;
+  getDoctors : () -> (vec User) query;
+  getUser : (int32) -> (opt User) query;
+  getUserBookings : (int32) -> (vec Booking) query;
+  getUsers : () -> (vec User) query;
+}
