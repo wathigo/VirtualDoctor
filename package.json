@@ -1,16 +1,24 @@
 {
-    "scripts": {
-        "dfx_install": "DFX_VERSION=0.14.2 sh -ci \"$(curl -fsSL https://sdk.dfinity.org/install.sh)\"",
-        "replica_start": "dfx start --background",
-        "replica_stop": "dfx stop",
-        "canister_deploy_local": "dfx deploy VirtualDoctor",
-        "canister_deploy_mainnet": "dfx deploy --network ic VirtualDoctor",
-        "canister_uninstall": "dfx canister uninstall-code VirtualDoctor",
-        "canister_call_get_message": "dfx canister call VirtualDoctor getMessage",
-        "canister_call_set_message": "dfx canister call VirtualDoctor setMessage '(\"Hello world!\")'"
-    },
-    "dependencies": {
-        "azle": "0.17.1"
-    }
+  "name": "dfinity_project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@dfinity/agent": "^0.15.6",
+    "@dfinity/candid": "^0.15.6",
+    "azle": "0.16.2",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": "^12 || ^14 || ^16 || ^18"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/uuid": "^9.0.1"
+  }
 }
-
