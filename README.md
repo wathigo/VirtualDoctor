@@ -1,47 +1,66 @@
-# VirtualDoctor
+# VirtualDoc
 
-Welcome to your first Azle project! This example project will help you to deploy your first canister (application) to the Internet Computer (IC) decentralized cloud. It is a simple getter/setter canister. You can always refer to [The Azle Book](https://demergent-labs.github.io/azle/) for more in-depth documentation.
+VirtualDoc programs implements canister that allows user to book doctor's appointments. Both users and doctors can create profiles and perform CRUD operations on the.
+On addition, users can create bookings with specific doctors.
 
-`dfx` is the tool you will use to interact with the IC locally and on mainnet. If you don't already have it installed:
+The canister can be tested locally as defined in the instructions below.
 
-```bash
-npm run dfx_install
+## Built With
+
+    - azle
+    - dfx
+    - typescript
+    - Ic protocol
+    - node
+
+## Getting Started
+
+    To get a local copy up and running follow these simple steps.
+
+## Install
+
+1. Clone the repository to your local machine
+
+```sh
+$ git clone git@github.com:wathigo/VirtualDoc.git
 ```
 
-Next you will want to start a replica, which is a local instance of the IC that you can deploy your canisters to:
+2. cd into the directory
 
-```bash
-npm run replica_start
+```sh
+$ cd VirtualDoc
 ```
 
-If you ever want to stop the replica:
+3. install dependencies
 
-```bash
-npm run replica_stop
-```
-
-Now you can deploy your canister locally:
-
-```bash
+```sh
 npm install
-npm run canister_deploy_local
 ```
 
-To call the methods on your canister:
+Initialize the local Internet Computer
 
-```bash
-npm run canister_call_get_message
-npm run canister_call_set_message
+```sh
+dfx start --background
 ```
 
-If you run the above commands and then call `npm run canister_call_get_message` you should see:
+Register, build, and deploy canister on the local Internet Computer
 
-```bash
-("Hello world!")
+```sh
+dfx deploy
 ```
 
-Assuming you have [created a cycles wallet](https://internetcomputer.org/docs/current/developer-docs/quickstart/network-quickstart) and funded it with cycles, you can deploy to mainnet like this:
+## Usage
 
-```bash
-npm run canister_deploy_mainnet
-```
+After deploying the program, one can use the candind interface or the command-line to interact with the canister endpoints.
+
+## Authors
+
+**Simon Wathigo**
+
+- Github: [@wathigo](https://github.com/wathigo)
+
+## Contributing
+
+    Contributions, issues and feature requests are welcome!
+
+Feel free to check the [issues page](../../issues).
