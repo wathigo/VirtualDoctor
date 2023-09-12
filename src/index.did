@@ -1,10 +1,17 @@
 type Booking = record {
   id : int32;
   doctorId : int32;
+  startAt : nat64;
   userId : int32;
   createdAt : nat64;
+  endAt : nat64;
 };
-type BookingPayload = record { doctorId : int32; userId : int32 };
+type BookingPayload = record {
+  doctorId : int32;
+  userId : int32;
+  endSessionAt : nat64;
+  startSessionAt : nat64;
+};
 type Doctor = record { id : int32; username : text; createdAt : nat64 };
 type User = record { id : int32; username : text; createdAt : nat64 };
 service : () -> {

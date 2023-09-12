@@ -207,28 +207,27 @@ export function createBooking(payload: BookingPayload): Booking {
     }
 
     const now = ic.time();
-    // Time slot is valid ?
-    if(startAt <= now || startAt <= now) {
+    if(startAt <= now || startAt <= now || startAt >= endAt) {
         throw new Error("startAt or endAt with the given time is invalid (passed)");
     }
 
     // Time slot = [startSession:endSession]
     // Check Doctor and User available ?
     
-    // bookings.startSession < booking.startSession && booking.endSession < bookings.endSession
-    //  [---bookings---]
+    // booking.startSession <= startAt && endAt < booking.endSession
+    //  [---booking---]
     //    |         | 
-    //    [ booking ]
+    //   s[ payload ]e
 
-    // bookings.endSession > booking.startSession 
-    //  [---bookings---]
-    //                 |
-    //             [--- * booking]
+    // booking.endSession >= startAt
+    //  [---booking---]
+    //                |
+    //             s[--- * payload]e
 
-    // bookings.startSession > booking.startSession && booking.endSession < bookings.startSession
-    //         [---bookings---]
+    // booking.startSession >= startAt && endAt >= booking.startSession
+    //         [---booking---]
     //         |
-    //     [booking --- * ]
+    //     s[payload --- * ]e
 
     // 1694397929150744000 - 1694399929150744000
 
@@ -238,20 +237,11 @@ export function createBooking(payload: BookingPayload): Booking {
             booking => ((booking.userId === userId || booking.doctorId === doctorId) && 
                             ((booking.startAt <= startAt && endAt <= booking.endAt) ||
                              (booking.endAt >= startAt) ||
-                             (booking.startAt >= startAt && endAt <= booking.startAt)))
-            ));
+                             (booking.startAt >= startAt && endAt >= booking.startAt)))
+        ));
     if (checkBooking) {
         throw new Error("A session has already been booked!");
     }
-
-    // // Check for existing booking
-    // const checkBooking = bookings.values().find(
-    //     (
-    //         booking => booking.userId === userId && booking.doctorId === doctorId
-    //         ));
-    // if (checkBooking) {
-    //     throw new Error("A session has already been booked!");
-    // }
 
     // Create new booking record
     try {
