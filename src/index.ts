@@ -27,15 +27,11 @@ type Booking = Record<{
     userId: int32;
     doctorId: int32;
     createdAt: nat64;
-    startAt: nat64;
-    endAt: nat64;
 }>;
 
 type BookingPayload = Record<{
     userId: int32,
-    doctorId: int32,
-    startSessionAt: nat64,
-    endSessionAt: nat64
+    doctorId: int32
 }>;
 
 const users = new StableBTreeMap<int32, User>(0, 38, 1000);
@@ -194,7 +190,7 @@ export function deleteDoctor(id: int32): Opt<Doctor> {
 $update;
 export function createBooking(payload: BookingPayload): Booking {
     // validate input fields
-    const { userId, doctorId, startSessionAt: startAt, endSessionAt: endAt } = payload;
+    const { userId, doctorId } = payload;
     if(!userId || !doctorId) {
         throw new Error(`Invalid input fields`);
     }
@@ -206,39 +202,11 @@ export function createBooking(payload: BookingPayload): Booking {
         throw new Error("user or doctor with the given Id does not exist");
     }
 
-    const now = ic.time();
-    if(startAt <= now || startAt <= now || startAt >= endAt) {
-        throw new Error("startAt or endAt with the given time is invalid (passed)");
-    }
-
-    // Time slot = [startSession:endSession]
-    // Check Doctor and User available ?
-    
-    // booking.startSession <= startAt && endAt < booking.endSession
-    //  [---booking---]
-    //    |         | 
-    //   s[ payload ]e
-
-    // booking.endSession >= startAt
-    //  [---booking---]
-    //                |
-    //             s[--- * payload]e
-
-    // booking.startSession >= startAt && endAt >= booking.startSession
-    //         [---booking---]
-    //         |
-    //     s[payload --- * ]e
-
-    // 1694397929150744000 - 1694399929150744000
-
-    // Check for avaliable booking
+    // Check for existing booking
     const checkBooking = bookings.values().find(
         (
-            booking => ((booking.userId === userId || booking.doctorId === doctorId) && 
-                            ((booking.startAt <= startAt && endAt <= booking.endAt) ||
-                             (booking.endAt >= startAt) ||
-                             (booking.startAt >= startAt && endAt >= booking.startAt)))
-        ));
+            booking => booking.userId === userId && booking.doctorId === doctorId
+            ));
     if (checkBooking) {
         throw new Error("A session has already been booked!");
     }
@@ -249,9 +217,7 @@ export function createBooking(payload: BookingPayload): Booking {
             id: bookings.isEmpty() ? 1 : generateId("bookings"),
             userId,
             doctorId,
-            createdAt: ic.time(),
-            startAt: payload.startSessionAt,
-            endAt: payload.endSessionAt,
+            createdAt: ic.time()
         }
         bookings.insert(booking.id, booking);
         return booking;
