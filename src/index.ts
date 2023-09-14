@@ -7,20 +7,17 @@ import {
     nat64,
     ic, 
     Opt,
-    int32
+    int32,
+    Principal,
 } from "azle";
 
-type User = Record<{
+type Profile = Record<{
     id: int32;
+    principal: Principal;
     username: string;
     createdAt: nat64;
 }>;
 
-type Doctor = Record<{
-    id: int32;
-    username: string;
-    createdAt: nat64;
-}>;
 
 type Booking = Record<{
     id: int32;
@@ -34,39 +31,99 @@ type BookingPayload = Record<{
     doctorId: int32
 }>;
 
-const users = new StableBTreeMap<int32, User>(0, 38, 1000);
-const doctors = new StableBTreeMap<int32, Doctor>(1, 38, 2440);
+// simulates an enum
+const ProfileType = Object.freeze({User: "User", Doctor: "Doctor"})
+
+const users = new StableBTreeMap<int32, Profile>(0, 38, 1000);
+const doctors = new StableBTreeMap<int32, Profile>(1, 38, 2440);
 const bookings = new StableBTreeMap<int32, Booking>(2, 38, 4000);
 
-$update;
-export function createUser(username: string): User{
-    if(!username) {
-        throw new Error("No username provided!");
+$update
+export function createProfile(username: string, profileType: string): Profile {
+  if (!username.trim()) {
+    throw new Error("No username provided!");
+  }
+  // ensures that profileType is either Doctor or User. Otherwise, an error will be thrown
+  if (profileType === ProfileType.Doctor || profileType === ProfileType.User) {
+    // uses the argument for the profileType to determine whether the new profile is for a doctor or user
+    const storage = profileType === ProfileType.User ? users : doctors;
+    // Check for an existing username
+    const checkUsername = storage
+      .values()
+      .find((profile) => profile.username === username);
+    if (checkUsername) {
+      throw new Error("Username already exist!");
     }
-
-    // Check for an existing user
-    const checkUser = users.values().find((user => user.username === username));
-    if(checkUser) {
-        throw new Error("Username already exist!");
-    }
+    // uses the argument for the profileType to determine whether the new profile is for a doctor or user
+    const idType: string =
+      profileType === ProfileType.User ? "users" : "doctors";
 
     // Add a new user to the users record
     try {
-        const user: User = {
-            id: users.isEmpty() ? 1 : generateId("users"),
-            username,
-            createdAt: ic.time()
-        }
-        users.insert(user.id, user);
-        return user;
-    } catch(err) {
-        throw new Error(`Error creating a new user ${err}`);
+      const profile: Profile = {
+        id: storage.isEmpty() ? 1 : generateId(idType),
+        principal: ic.caller(),
+        username,
+        createdAt: ic.time(),
+      };
+      // saves profile to the respective storage i.e doctors or users
+      storage.insert(profile.id, profile);
+      return profile;
+    } catch (err) {
+      throw new Error(`Error creating a new profile: ${err}`);
     }
+  }
+
+  throw new Error("Invalid profile type");
+}
+
+$update
+export function deleteProfile(id: int32, profileType: string): Opt<Profile> {
+  // Data input validation
+  if (!id) {
+    throw new Error("Invalid user id!");
+  }
+  // ensures that profileType is either Doctor or User. Otherwise, an error will be thrown
+  if (profileType === ProfileType.Doctor || profileType === ProfileType.User) {
+    const storage = profileType === ProfileType.User ? users : doctors;
+    const idType = profileType === ProfileType.User ? "userId" : "doctorId";
+
+    if(!storage.containsKey(id)){
+        throw new Error(`ID=${id} does not exist in ${profileType} storage.`)
+    }
+
+    // Only the owner/principal of a profile can delete the profile
+    if(storage.get(id).Some?.principal.toString() !== ic.caller().toString()){
+        throw new Error("Unauthorized caller.")
+    }
+    // Delete users bookings
+    try {
+      bookings.values().forEach((booking) => {
+        // Uses bracket notation to access the userId or doctorId property based off the argument of the profileType parameter
+        // checks whether the value of the accessed property matches the id of the profile to delete
+        if (booking[idType] === id) {
+          bookings.remove(booking.id);
+        }
+      });
+    } catch (err) {
+      throw new Error(`Couldn't delete ${profileType} bookings`);
+    }
+
+    try {
+      return storage.remove(id);
+    } catch (err) {
+      throw `Couln't delete profile ${err}`;
+    }
+  }
+  throw new Error("Invalid profile type");
 }
 
 $query
-export function getUsers(): Vec<User> {
+export function getUsers(): Vec<Profile> {
     try {
+        if(users.isEmpty()){
+            throw new Error(`There is currently no user profile in storage.`)
+        }
         return users.values();
     } catch (err) {
         throw new Error(`Failed to fetch users${err}`);
@@ -74,74 +131,29 @@ export function getUsers(): Vec<User> {
 }
 
 $query;
-export function getUser(id: int32): Opt<User> {
+export function getUser(id: int32): Profile {
     // Data input validation
     if(!id) {
         throw new Error("Invalid user id!");
     }
 
     try {
-        return users.get(id);
+        const user = users.get(id).Some;
+        if(!user){
+            throw new Error("User not found");
+        }
+        return user;
     } catch (err) {
         throw (`Couldn't find a user with the specified id ${err}`);
     }
 }
 
-$update;
-export function deleteUser(id: int32): Opt<User> {
-    // Data input validation
-    if(!id) {
-        throw new Error("Invalid user id!");
-    }
-
-    // Delete users bookings
-    try {
-        bookings.values().forEach((booking => {
-            if (booking.userId === id) {
-                bookings.remove(booking.id);
-            }
-        }))
-    } catch(err) {
-        throw new Error(`Couldn't delete users bookings`);
-    }
-
-    try {
-        return users.remove(id);
-    } catch (err) {
-        throw `Couln't delete user ${err}`;
-    }
-}
-
-$update;
-export function createDoctor(username: string): Doctor {
-    // Input validation for username
-    if(!username) {
-        throw new Error(`Username field required!`);
-    }
-
-    // Check for an existing doctor
-    const checkDoctor = doctors.values().find((doc => doc.username === username));
-    if(checkDoctor) {
-        throw new Error("Username already exist!");
-    }
-
-    // Create new doctor record and insert into doctors tree.
-    try {
-        const doctor: Doctor = {
-            id: doctors.isEmpty() ? 1 : generateId("doctors"),
-            username,
-            createdAt: ic.time()
-        };
-        doctors.insert(doctor.id, doctor);
-        return doctor;
-    } catch(err) {
-        throw new Error(`Couldn't add a new doctor record ${err}`);
-    }
-}
-
 $query;
-export function getDoctors(): Vec<Doctor> {
+export function getDoctors(): Vec<Profile> {
     try {
+        if(doctors.isEmpty()){
+            throw new Error("There is currently no doctor profile in storage.")
+        }
         return doctors.values();
     } catch(err) {
         throw new Error(`Error fetching doctors ${err}`);
@@ -149,51 +161,28 @@ export function getDoctors(): Vec<Doctor> {
 }
 
 $query;
-export function getDoctor(id: int32): Opt<Doctor> {
+export function getDoctor(id: int32): Profile {
     // validate input field
     if(!id) {
         throw new Error("Invalid id field")
     }
 
     try {
-        return doctors.get(id);
+        const doctor = doctors.get(id).Some;
+        if(!doctor){
+            throw new Error("Doctor not found")
+        } 
+        return doctor;
     } catch(err) {
         throw new Error(`Error fetching doctor ${err}`)
     }
 }
 
-$update;
-export function deleteDoctor(id: int32): Opt<Doctor> {
-    // Validate input field
-    if(!id) {
-        throw new Error("Invalid id input field");
-    }
-
-    // delete bookings made to the doctor
-    try {
-        bookings.values().forEach((booking => {
-            if (booking.doctorId === id) {
-                bookings.remove(booking.id);
-            }
-        }));
-    } catch(err) {
-        throw new Error(`Couldn't delete bookings made to the doctor ${err}`);
-    }
-
-    try {
-        return doctors.remove(id);
-    } catch(err) {
-        throw new Error(`Couldn't delete doctor ${err}`);
-    }
-}
 
 $update;
 export function createBooking(payload: BookingPayload): Booking {
     // validate input fields
     const { userId, doctorId } = payload;
-    if(!userId || !doctorId) {
-        throw new Error(`Invalid input fields`);
-    }
 
     // Validate user and doctor existing records
     const user = users.containsKey(userId);
@@ -259,9 +248,9 @@ export function getDoctorBookings(id: int32): Vec<Booking> {
 
 $update;
 export function deleteBooking(id: int32): Opt<Booking> {
-    // Validate id input field
-    if(!id) {
-        throw new Error('Invalid input field!');
+    // Validate id
+    if(!bookings.containsKey(id)) {
+        throw new Error('Id does not exist!');
     }
 
     try {
@@ -274,10 +263,10 @@ export function deleteBooking(id: int32): Opt<Booking> {
 function generateId(recordName: string): int32 {
     // Generate ids based on the last id of the record
     if(recordName === "users") {
-        return users.values().slice(-1)[0].id + 1;
+        return Number(users.len()) + 1;
     } else if(recordName === "doctors") {
-        return doctors.values().slice(-1)[0].id + 1;
+        return Number(doctors.len()) + 1;
     } else {
-        return bookings.values().slice(-1)[0].id + 1;
+        return Number(bookings.len()) + 1;
     }
 }
