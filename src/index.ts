@@ -1,3 +1,4 @@
+import { Nat64 } from "@dfinity/candid/lib/cjs/idl";
 import {
     $query,
     $update,
@@ -5,6 +6,7 @@ import {
     StableBTreeMap,
     Vec,
     nat64,
+    nat32,
     ic, 
     Opt,
     int32
@@ -26,8 +28,8 @@ type Booking = Record<{
     id: int32;
     userId: int32;
     doctorId: int32;
-    startAt: string;
-    endAt: string;
+    startAt: nat32;
+    endAt: nat32;
     createdAt: nat64;
 }>;
 
@@ -211,38 +213,35 @@ export function createBooking(payload: BookingPayload): Booking {
         throw new Error("user or doctor with the given Id does not exist");
     }
 
+    const begin: nat32 = Number(Date.parse(startAt));
+    const end: nat32 = Number(Date.parse(endAt));
+
     //Validate boooking period is not in the past
     if (
-        Date.parse(startAt) <= Date.now() ||
-        Date.parse(endAt) <= Date.now() ||
-        Date.parse(startAt) >= Date.parse(endAt)
+        begin <= ic.time() ||
+        end <= ic.time() ||
+        begin >= end
         ) 
         {
         throw new Error("Starting time given is in the past");
     }
 
-    //Check for doctors availbility time slot
-
     // Check for existing booking
     const checkBooking = bookings.values().find(
         (
-            booking => ((booking.userId === userId || booking.doctorId === doctorId) &&
-                            ((booking.startAt <= startAt && endAt <= booking.endAt) ||
-                             (booking.endAt >= startAt) ||
-                             (booking.startAt >= startAt && endAt >= booking.startAt)))
+            booking => ((booking.userId === userId || booking.doctorId === doctorId))
         ));
     if (checkBooking) {
         throw new Error("A session has already been booked!");
     }
-
     // Create new booking record
     try {
         const booking: Booking = {  
             id: generateId(bookings),
             userId,
             doctorId,
-            startAt,
-            endAt,
+            startAt:  begin,
+            endAt: end,
             createdAt: ic.time()
         }
         bookings.insert(booking.id, booking);
