@@ -8,7 +8,7 @@ import {
     ic, 
     Opt,
     int32
-} from "azle";
+} from "azle"; 
 
 type User = Record<{
     id: int32;
@@ -26,12 +26,16 @@ type Booking = Record<{
     id: int32;
     userId: int32;
     doctorId: int32;
+    startAt: string;
+    endAt: string;
     createdAt: nat64;
 }>;
 
 type BookingPayload = Record<{
     userId: int32,
     doctorId: int32
+    startAt: string;
+    endAt: string;
 }>;
 
 const users = new StableBTreeMap<int32, User>(0, 38, 1000);
@@ -53,7 +57,7 @@ export function createUser(username: string): User{
     // Add a new user to the users record
     try {
         const user: User = {
-            id: users.isEmpty() ? 1 : generateId("users"),
+            id: generateId(users),
             username,
             createdAt: ic.time()
         }
@@ -128,7 +132,7 @@ export function createDoctor(username: string): Doctor {
     // Create new doctor record and insert into doctors tree.
     try {
         const doctor: Doctor = {
-            id: doctors.isEmpty() ? 1 : generateId("doctors"),
+            id: generateId(doctors),
             username,
             createdAt: ic.time()
         };
@@ -190,8 +194,13 @@ export function deleteDoctor(id: int32): Opt<Doctor> {
 $update;
 export function createBooking(payload: BookingPayload): Booking {
     // validate input fields
-    const { userId, doctorId } = payload;
-    if(!userId || !doctorId) {
+    const { userId, doctorId, startAt, endAt} = payload;
+    if(
+        !userId ||
+        !doctorId ||
+        !startAt ||
+        !endAt
+        ) {
         throw new Error(`Invalid input fields`);
     }
 
@@ -202,21 +211,38 @@ export function createBooking(payload: BookingPayload): Booking {
         throw new Error("user or doctor with the given Id does not exist");
     }
 
+    //Validate boooking period is not in the past
+    if (
+        Date.parse(startAt) <= Date.now() ||
+        Date.parse(endAt) <= Date.now() ||
+        Date.parse(startAt) >= Date.parse(endAt)
+        ) 
+        {
+        throw new Error("Starting time given is in the past");
+    }
+
+    //Check for doctors availbility time slot
+
     // Check for existing booking
     const checkBooking = bookings.values().find(
         (
-            booking => booking.userId === userId && booking.doctorId === doctorId
-            ));
+            booking => ((booking.userId === userId || booking.doctorId === doctorId) &&
+                            ((booking.startAt <= startAt && endAt <= booking.endAt) ||
+                             (booking.endAt >= startAt) ||
+                             (booking.startAt >= startAt && endAt >= booking.startAt)))
+        ));
     if (checkBooking) {
         throw new Error("A session has already been booked!");
     }
 
     // Create new booking record
     try {
-        const booking: Booking = {
-            id: bookings.isEmpty() ? 1 : generateId("bookings"),
+        const booking: Booking = {  
+            id: generateId(bookings),
             userId,
             doctorId,
+            startAt,
+            endAt,
             createdAt: ic.time()
         }
         bookings.insert(booking.id, booking);
@@ -271,13 +297,8 @@ export function deleteBooking(id: int32): Opt<Booking> {
     }
 }
 
-function generateId(recordName: string): int32 {
-    // Generate ids based on the last id of the record
-    if(recordName === "users") {
-        return users.values().slice(-1)[0].id + 1;
-    } else if(recordName === "doctors") {
-        return doctors.values().slice(-1)[0].id + 1;
-    } else {
-        return bookings.values().slice(-1)[0].id + 1;
-    }
+function generateId(collection: StableBTreeMap<any, any>): int32 {
+    // Generate ids based on the last id of the collection
+    const values = collection.values();
+    return values.length > 0 ? values[values.length - 1].id + 1 : 1;
 }
