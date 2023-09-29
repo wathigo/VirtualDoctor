@@ -218,8 +218,8 @@ export function createBooking(payload: BookingPayload): Booking {
 
     //Validate boooking period is not in the past
     if (
-        begin <= ic.time() ||
-        end <= ic.time() ||
+        begin <= Date.now() ||
+        end <= Date.now() ||
         begin >= end
         ) 
         {
