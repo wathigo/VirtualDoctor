@@ -213,6 +213,14 @@ export function createBooking(payload: BookingPayload): Booking {
         throw new Error("user or doctor with the given Id does not exist");
     }
 
+    //Date.parse() not woking in this environment
+    //ic.time() feature is still work in progress
+    //Azle is still in beta version 
+    //Feature will be useful once the package is
+    //updated with time-support feature
+    //See https://demergent-labs.github.io/azle/reference/canister_apis/time.html?highlight=time#time
+    //For more information
+
     const begin: nat32 = Number(Date.parse(startAt));
     const end: nat32 = Number(Date.parse(endAt));
 
