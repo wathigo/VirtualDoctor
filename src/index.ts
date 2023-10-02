@@ -28,8 +28,8 @@ type Booking = Record<{
     id: int32;
     userId: int32;
     doctorId: int32;
-    startAt: nat32;
-    endAt: nat32;
+    startAt: string;
+    endAt: string;
     createdAt: nat64;
 }>;
 
@@ -248,8 +248,8 @@ export function createBooking(payload: BookingPayload): Booking {
             id: generateId(bookings),
             userId,
             doctorId,
-            startAt:  begin,
-            endAt: end,
+            startAt,
+            endAt,
             createdAt: ic.time()
         }
         bookings.insert(booking.id, booking);

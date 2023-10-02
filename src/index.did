@@ -1,10 +1,10 @@
 type Booking = record {
   id : int32;
   doctorId : int32;
-  startAt : nat32;
+  startAt : text;
   userId : int32;
   createdAt : nat64;
-  endAt : nat32;
+  endAt : text;
 };
 type BookingPayload = record {
   doctorId : int32;
